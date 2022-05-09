@@ -82,7 +82,7 @@ open .Podfile -a xcode
 3. Add the following line to your Podfile in your watchKit extension
 
 ```Ruby
-    pod 'RookMotionWatchLink', :git => ""
+    pod 'RookMotionWatchLink', :git => "https://gitlab.com/rooklinkforclients/rookmotionwatchlink.git"
 ```
 
 4. Add the following lines at the end of the Podfile
@@ -1600,6 +1600,5 @@ This documentation is provided by **RookMotion** all rights reserved to Rookerie
 Startup México SUM Campus Ciudad de México  
 
 +52 55 39406461
-
 
 
