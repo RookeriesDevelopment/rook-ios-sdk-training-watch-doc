@@ -60,7 +60,7 @@ These functionalities are:
 ### required software
 
 To build a project using the RookMotion SDK you need to download and install
-* [Xcode](https://developer.apple.com/xcode/) version 12.4 or later.
+* [Xcode](https://developer.apple.com/xcode/) version 14.0 or later.
 * [Cocoapods](https://guides.cocoapods.org/using/getting-started.html)
 
 The watch OS deployment minimum target is 6.2 and the swift version is 5.0.
@@ -89,13 +89,13 @@ open .Podfile -a xcode
 
 ```Ruby
 post_install do |installer|
-    installer.pods_project.targets.each **do** |target|
-        target.build_configurations.each **do** |config|
-            config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
-            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
-            config.build_settings['WATCHOS_DEPLOYMENT_TARGET'] = '6.2'
-        end
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['WATCHOS_DEPLOYMENT_TARGET'] = '7.0'
     end
+  end
 end
 ```
 
@@ -115,7 +115,7 @@ Add your client_key and your token_level to your ```ExtensionDelegate.swift``` a
 import RookMotionWatchLink
 ```
 
-* Add the following lines to your ```applicationDidFinishLaunching()``` method, replacing *YOUR_KEY* and *YOUR_TOKEN* with your credential:
+* Add the following lines to your `applicationDidFinishLaunching()` method, replacing *YOUR_KEY* and *YOUR_TOKEN* with your credential:
 
 * The developer can set the `urlBase` to sandbox environment or production environment.
 
@@ -129,21 +129,24 @@ func  applicationDidFinishLaunching() {
                 let urlBase = "YOUR_BASE_URL"
                 let urlRemote = "YOUR_REMOTE_URL"
 
-        RMSettings.shared.setCredentials(client_key: clientKey, token: tokenLevel)
-        RMSettings.shared.setUrlApi(with: urlBase)
-        RMSettings.shared.setUrlRemote(with: urlRemote)
-        RMSettings.shared.initRookMotionSDK()
+        RWRookSettings.shared.setCredentials(client_key: clientKey, token: tokenLevel)
+        RWRookSettings.shared.setUrlApi(with: urlBase)
+        RWRookSettings.shared.setUrlRemote(with: urlRemote)
+        RWRookSettings.shared.initRookMotionSDK()
     }
 ```
 Before to use all the classes and method the following permissions have to be in the Info.plist file.
 
+![info_plist](/infoplist_configuration.png)
+
 | Key | Type | String |
 | ---- | ------ | ---- |
-| Privacy - Health Share Usage Description | String | Allow Bluetooth access to connect with your training sensors devices.|
-| Privacy - Health Update Usage Description | String | Allow Bluetooth access to connect with your training sensors devices. |
+| Privacy - Health Share Usage Description | `String` | We will use your health information to better track of your workouts..|
+| Privacy - Health Update Usage Description | `String` | We will use your health information to better track of your workouts.. |
 
-**Note: It is important that: `Workout processing` option is enabled in Background Mode.
-and HealthKit has to be added**
+**Note: It is important that: `Workout processing` option is enabled in Background Mode. and HealthKit has to be added**
+
+![configuration_capabilities](/configuration_capabilities.png)
 
 ## Package usage
 
@@ -185,6 +188,31 @@ let communicationManager  = RWCommunicationManager.shared
 sensorManager.configureSession()
 let info = ["sync": "info"]
 sensorManager.sendInfo(info)
+```
+
+
+### SendPendingTraining
+
+Calling this method sends a the training object to the device paired.
+
+```swift
+  public func sendPendingTraining(_ unfinishTraining: RWTrainingInfo)
+```
+
+**parameters**
+- unfinishTraining: `RWTrainingInfo` objet to send.
+
+#### Example
+```swift
+let communicationManager  = RWCommunicationManager.shared
+let storageManager: RMStorageManager = RMStorageManager()
+
+func sendTraining() {
+  guard let training = storageManager.getUnfinishedTrainings().first { 
+    return
+  }
+  communicationManager.sendPendingTraining(training)
+}
 ```
 
 ### Delegate
@@ -240,29 +268,27 @@ The workout class provides automated methods to perform a workout, this class co
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| delegate | ```WorkoutManagerDelegate``` | The delegate receives notifications when a workout session’s state changes or when a workout session fails. |
-| state | ```WorkoutState``` |  This property indicates the current state of a workout |
-| training | ```RWTrainingInfo``` | This model object of realm contains all the data of a training |
-| remoteClass | ```RWRemoteClass``` | This model contains all the information to connect a remote class |
+| delegate | `WorkoutManagerDelegate` | The delegate receives notifications when a workout session’s state changes or when a workout session fails. |
+| state | `WorkoutState` |  This property indicates the current state of a workout |
+| remoteClass | ```RWRookRemoteClass``` | This model contains all the information to connect a remote class |
 | duration | ```Float``` | The number of seconds of the training duration |
 
 #### Methods
 
 | Returns      | Function |
 | ----------- | ----------- |
-| ```void``` | ```start(configuration: WorkoutConfiguration?)``` |
-| `void` | `pauseWorkout()` |
-| `void` | `resumenWorkOut()` |
+| `void` | `start(configuration: RookTrainingConfiguration?)` |
+| `void` | `pauseTraining()` |
+| `void` | `resumenTraining()` |
 | `void` | `stop()` |
-| `void` | `configureRemote(with remoteClass: RemoteClass)` |
-| `void` | `restoreWorkout(with pendingTraining: RWTrainingInfo)`|
+| `void` | `restoreTraining(with pendingTraining: RWRookTrainingDTO)`|
 
 #### start()
 ```swift
 public func start(configuration: WorkoutConfiguration?)
 ```
 
-This method configures the workout with the `WorkoutConfiguration` object given, starts the activity and collect all the data of the session.
+This method configures the training with the `RookTrainingConfiguration` object given, starts the activity and collect all the data of the session.
 
 #### pauseWorkout()
 
@@ -288,15 +314,7 @@ public func stop()
 
 This method finish a workout all the information will be send to the rookmotion web server the training will be associate to the user stored in the local data base.
 
-#### configureRemote()
-
-```swift
-public func configureRemote(with remoteClass: RemoteClass)
-```
-
-When you want to send a realtime information this method allows to send all de data to the remote class configured.
-
-**Note: Its important to request access to the remote classes before use this method**
+**Note: It is important to request access to the remote classes before use this method**
 
 #### restoreWorkout()
 
@@ -334,13 +352,13 @@ This class allows the access to the training types if the trainings types are st
 
 | Returns  | Function |
 | ----------- | ----------- |
-| `[WorkoutType]` | `getTrainingTypes(completion: @escaping([WorkoutType])` |
-| `[RemoteClass]` | `getRemoteClasses(completion: @escaping([RemoteClass])` |
+| `[RWRookTrainingType]` | `getTrainingTypes(completion: @escaping([RWRookTrainingType], Error?)` |
+| `[RWRookRemoteClass]` | `getRemoteClasses(completion: @escaping([RWRookRemoteClass], Error?)` |
 
 #### getTrainingTypes()
 
 ```swift
-public func getTrainingTypes(completion: @escaping([WorkoutType]) -> Void)
+public func getTrainingTypes(completion: @escaping([RWRookTrainingType], Error?) -> Void)
 ```
 
 This method retrieves a list of WorkoutType objects if there is no internet connection, it will return the workout types stored in the local data base.
@@ -348,10 +366,10 @@ This method retrieves a list of WorkoutType objects if there is no internet conn
 #### getRemoteClasses()
 
 ```swift 
-public func getRemoteClasses(completion: @escaping([RemoteClass]) -> Void)
+public func getRemoteClasses(completion: @escaping([RWRookRemoteClass], Error?) -> Void)
 ```
 
-This method retrieves in the completion a list of `RemoteClass`objects which contains the information of all remote classes available for the user stored in the local data base
+This method retrieves in the completion a list of `RWRookRemoteClass`objects which contains the information of all remote classes available for the user stored in the local data base
 
 ### RepositoryTraining
 
@@ -359,33 +377,24 @@ This class allows to store, retrieve and upload sensors and trainings.
 
 | Returns      | Function |
 | ----------- | ----------- |
-| `RMResponse` | `addSensor(sensor: RMSensorAPI, completion: @escaping (RMResponse) -> Void)` |
-| `RMResponse` | `createSensor(completion: @escaping(RMResponse)` |
-| `RMResponse` | `uploadPendingSensors(completion: @escaping (RMResponse) -> Void)` |
-| `(RMResponse,[RMSensorAPI])` | `getUserSensors(completion: @escaping (RMResponse,[RMSensorAPI]?) -> Void)` |
-| `RMResponse` | `uploadPendingTrainings(delete: Bool, completion: @escaping (RMResponse) -> Void)` |
+| `RMWResponse` | `addSensor(sensorName: String, completion: @escaping (RMWResponse) -> Void)` |
+| `RMWResponse` | `uploadPendingSensors(completion: @escaping (RMResponse) -> Void)` |
+| `(RMWResponse, [RWRookSensorDTO])` | `getUserSensors(completion: @escaping (RMWResponse,[RWRookSensorDTO]?) -> Void)` |
+| `RMWResponse` | `uploadPendingTrainings(delete: Bool, completion: @escaping (RMWResponse) -> Void)` |
 
 #### addSensor()
 
 ```swift
-public func addSensor(sensor: RMSensorAPI,
-                      completion: @escaping (RMResponse) -> Void
+public func addSensor(sensorName: String,
+                      completion: @escaping (RMWResponse) -> Void
 ```
 
-The method adds a RMSensorAPI object to the local data base and uploads that object to the web server this sensor is linked to the user stored in the local data base.
-
-#### createSensor()
-
-```swift
-public func createSensor(completion: @escaping(RMResponse) -> Void)
-```
-
-Creates a sensor with the apple watch name it will be stored in the local data base and uploads to the web server.
+The method adds a Sensor object to the local data base and uploads that object to the web server this sensor is linked to the user stored in the local data base.
 
 #### uploadPendingSensors()
 
 ```swift
-public func uploadPendingSensors(completion: @escaping (RMResponse) -> Void)
+public func uploadPendingSensors(completion: @escaping (RMWResponse) -> Void)
 ```
 
 Uploads to the server all the sensors stored in the local data base.
@@ -393,7 +402,7 @@ Uploads to the server all the sensors stored in the local data base.
 #### getUserSensors() 
 
 ```swift
-public func getUserSensors(completion: @escaping (RMResponse,[RMSensorAPI]?) -> Void)
+public func getUserSensors(completion: @escaping (RMWResponse,[RMSensorAPI]?) -> Void)
 ```
 
 Retrieves a list of `RMSensorAPI` objects from the web server if there is no internet connection retrieves the list stored in the local data base.
@@ -401,7 +410,7 @@ Retrieves a list of `RMSensorAPI` objects from the web server if there is no int
 #### uploadPendingTrainings()
 
 ```swift
-public func  uploadPendingTrainings(delete: Bool,completion: @escaping (RMResponse) -> Void)
+public func  uploadPendingTrainings(delete: Bool,completion: @escaping (RMWResponse) -> Void)
 ```
 
 The method uploads all the training stored in the local data base, if the `delete` input is set with true, the trainings stored will be deleted after the upload.
@@ -428,12 +437,12 @@ extension  RWTrainingAPI: EndPointType
 
 | Function      | Description |
 | ----------- | ----------- |
-| `public func addPendingTrainingToUser(userUUID: String, userToken: String? = nil, training: RWTrainingInfo, completion: @escaping(Int, String?, _ error: String?) -> Void)` | Uploads a training to the web server this workout will be linked to user uuid provided. |
+| `public func addPendingTrainingToUser(userUUID: String, userToken: String? = nil, training: RWRookTrainingDTO, completion: @escaping(Int, String?, _ error: String?) -> Void)` | Uploads a training to the web server this workout will be linked to user uuid provided. |
 
 #### addPendingTrainingToUser() 
 ```swift
 public func addPendingTrainingToUser(userUUID: String, userToken: String? = nil,
-                                     training: RWTrainingInfo,
+                                     training: RWRookTrainingDTO,
                                       completion: @escaping(Int, String?, _ error: String?) -> Void)
 ```
 
@@ -442,7 +451,7 @@ Uploads a training to the web server this workout will be linked to user uuid pr
 ##### Example
 ```swift
 let networkManager = NetworkManager<RWTrainingAPI>()
-let training = RWTrainingInfo()
+let training = RWRookTrainingDTO()
 let userUuid = "fief-2dwd2-222dd"
 
 networkManager.addPendingTrainingToUser(userUUID: userUuid, training: training) { (httpCode, response, error) in
@@ -461,7 +470,7 @@ extension  RWTrainingTypeAPI: EndPointType
 
 | Function    | Description |
 | ----------- | ----------- |
-| ```getTrainingTypes(userToken: String? = nil, completion: @escaping([RWTrainingType]?, _ error: String?) -> Void)``` | Retrieves a list of `RWTrainingType`  objects. |
+| ```getTrainingTypes(userToken: String? = nil, completion: @escaping([RWRookTrainingType]?, _ error: String?) -> Void)``` | Retrieves a list of `RWTrainingType`  objects. |
 
 ##### Example
 ```swift
@@ -514,7 +523,7 @@ networkManager.addSesnorToUser(sensor_name: sensorName,
 The method retrieves a list of `RMSensorAPI`objects linked to a user.
 
 ```swift
-public func getUserSensor(userUUID: String, userToken: String? = nil, completion: @escaping**([RMSensorAPI]?, _ error: String?) -> Void)
+public func getUserSensors(userUUID: String, userToken: String? = nil, completion: @escaping**([RMSensorAPI]?, _ error: String?) -> Void)
 ```
 ##### Example
 
@@ -620,674 +629,235 @@ let classUUID = "fisssf-2ssdwd2-222dd"
 networkManager.disconnectUserFromClass(with: classUUID, userUUID: userUuid) 
 ```
 
-### RWStorageManager class
+### Storage
+
+The main purpose of the modules that will be presented below of this section 
+is store the information needed to make the app work offline.
+
+**Note it is recommended to use the repository classes that are create to fetch the data online and offline**
+
+## **RWStorageManager class**
+
+RookUserStorage  stores the user information in the local data base this class is prepare to perform changes in the main thread and background thread
 
 ```swift
-public class RWStorageManager
+public class RookUserStorage
 ```
-
-This class can be used for the developer and for other functions in RM package,  the main purpose of this class is to store information to be consulted later on many situations.
-
-* [User](#user-content-user-storage)
-* [Sensor](#user-content-sensor-storage)
-* [Training](#user-content-training-storage)
-* [Training summaries](#user-content-training-summaries-storage)
-* [Training update](#user-content-training-update)
-
-### User storage
 
 | Returns      | Function | Description |
 | ----------- | ----------- | -------- |
-| ```throws```  | ```storeUserInfo(user: RMUser) throws``` | Save a RMUser object in database if not exist and update the info if already exist, Throws an  `NSError`  if the transaction could not be written. |
-| `Void` | `deleteUserInfo()` | Deletes the `RMUser` object stored in database. |
-| `RMUser?` | `readUserInfo()` | Returns a `RMUser` object, If exists in data base. |
-| `String?` | `getUserUUID()`| Returns the user's uuid, if there is a `RMUser` stored in database. |
-| `String?` | `getUserToken()`| Returns the user's token, if there is a `RMUser` stored in database. |
-|`String?` | `getUserPseudonym()` | Returns the user's pseudonym, if there is a  `RMUser` stored in database. |
+| `void` | `public func storeUser(userToStore: UserDTO, context: ContextType)` | Stores a user in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
+| `void` | `func deleteUser(context: ContextType)` | Delete the current user stored in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
+| `UserDTO?` | `func readUser(context: ContextType) -> UserDTO?` | Returns the user stored in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
 
+### StoreUser
 
-#### storeUserInfo()
+Stores a user in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext
+
+- parameter userToStore: `UserDTO` the object that contains the user information
+ - parameter context: `ContextType` to select in which thread the operation will be performed.
+
 ```swift
-public func storeUserInfo(user: RMUser) throws
-```
-Save a RMUser object in database if not exist and update the info if already exist, Throws an  `NSError`  if the transaction could not be written.
-
-##### Example
-```swift
-let storageManager = RMStorageManager()
-
-let userToStore = RMUser()
-userToStore.userUUID = "3nj3oi2i-1111-2222-3333-fii21"
-userToStore.name  = "name"
-userToStore.birthday  = "1999-09-09"
-userToStore.lastName1 = ""
-userToStore.lastName2 = ""
-userToStore.sex = "M"
-userToStore.email = ""
-userToStore.phone = ""
-
-userToStore.physiologicalVariables = RMUserPhysiologicalVariables()
-userToStore.physiologicalVariables!.weight = "70"
-userToStore.physiologicalVariables!.height = "190"
-userToStore.physiologicalVariables!.restingHeartRate = "60"
-
-do {
-    try storageManager.storeUserInfo(user: userToStore)
-} catch {
-    print("Error", error)
-}
+public func storeUser(userToStore: UserDTO, context: ContextType)
 ```
 
-#### deleteUserInfo()
+### Delete user
+
+Delete the current user stored in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext
+
+- parameter context: `ContextType` to select in which thread the operation will be performed.
+
 ```swift
-public func deleteUserInfo()
+public func deleteUser(context: ContextType)
 ```
 
-Deletes the `RMUser` object stored in database.
+### Read user
 
-##### Example
+Returns the user stored in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext.
+
+- parameter userToStore: `UserDTO` the object that contains the user information
+- parameter context: `ContextType` to select in which thread the operation will be performed.
+   
+- Returns: A `UserDTO?` optional object that contains the user's information.
+
 ```swift
-let storageManager = RMStorageManager()
-storageManager.deleteUserInfo()
+public func readUser(context: ContextType) -> UserDTO?
 ```
 
-#### readUserInfo()
+## **RookSensorStorage class**
+
+has an implementation to store, delete, update and read sensors, this class is prepare to perform changes in the main thread and background thread
+
 ```swift
-public func readUserInfo() -> RMUser?
+public class RookSensorStorage
 ```
-
-Returns a `RMUser` object, If exists in data base.
-
-##### Example
-```swift
-let storageManager = RMStorageManager()
-guard let userInfo = storageManager.readUserInfo() else { return }
-print(userInfo.name)
-```
-
-#### getUserUUID()
-```swift
-public func getUserUUID() -> String?
-```
-
-Returns the user's uuid, if there is a `RMUser` stored in database.
-
-##### Example
-```swift
-let storageManager = RMStorageManager()
-guard let userUUID = storageManager.getUserUUID() else { return }
-print(userUUID)
-```
-
-#### getUserToken()
-```swift
-public func getUserToken() -> String?
-```
-
-Returns the user's token, if there is a `RMUser` stored in database.
-
-##### Example
-```swift
-let storageManager = RMStorageManager()
-guard let userToken = storageManager.getUserToken() else { return }
-print(userToken)
-```
-
-### Sensor storage
 
 | Returns      | Function | Description |
 | ----------- | ----------- | -------- |
-| `throws` | `storeSensor(sensor: RMSensorAPI)` | Adds or updates a `RMSensorAPI` object in data base. Throws an  `NSError`  if the transaction could not be written. |
-| `void` | `deleteAllSensors()` | Removes all the `RMSensorAPI` objects stored in database. |
-| `[RMSensorAPI]` | `readSensorsList()` | Retrieves a list of user's sensor stored. |
-| `String` | `getSensorUUID(sensorName: String) -> String` | Returns the sensorUUID for the given name. If the sensor does not exist, it will return an empty string. |
-| `[RMSensorAPI]` | `getSensorsWithoutUUID() -> [RMSensorAPI]` | Returns a list of stored sensors that do not contain UUIDs. |
+| `void` | `func createSensor(sensorToStore: SensorDTO, context: ContextType)` | Stores a sensor in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
+| `void` | `deleteSensor(sensor: SensorDTO, context: ContextType)` | Deletes a sensor in the local data base, If the action will be performed in the main thread the contect have to be the viewContext, in other case the context should be backGroundContext |
+| `void` | `func updateSensor(sensor: SensorDTO, context: ContextType)` | Updates a sensor in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
+| `[SensorDTO]` | `func readSensors(context: ContextType) -> [SensorDTO]` | Retrives an array of sensors sotered in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
 
-#### storeSensor()
+### Create Sensor
 
-```swift
-public func storeSensor(sensor: RMSensorAPI) throws
-```
-Adds or updates a `RMSensorAPI` object in data base. Throws an  `NSError`  if the transaction could not be written.
-
-##### Example
+Stores a sensor in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext
 
 ```swift
-let storageManager = RMStorageManager()
-
+public func createSensor(sensorToStore: SensorDTO, context: ContextType)
 ```
 
-#### deleteAllSensor()
+### Delete Sensor
+
+Deletes a sensor stored in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext
+
+- parameter sensorToStore: `SensorDTO` the object that contains the sensor information to delete
+- parameter context: `ContextType` to select in which thread the operation will be performed.
 
 ```swift
-public func deleteAllSensors()
+public func deleteSensor(sensor: SensorDTO, context: ContextType)
 ```
-Removes all the `RMSensorAPI` objects stored in database.
 
-##### Example
+
+### Update Sensor
+
+Updates a sensor stored in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext
+
+- parameter sensorToStore: `SensorDTO` the object that contains the sensor information to update
+- parameter context: `ContextType` to select in which thread the operation will be performed.
 
 ```swift
-let storageManager = RMStorageManager()
-storageManager.deleteAllSensor()
+public func updateSensor(sensor: SensorDTO, context: ContextType)
 ```
 
-#### readSensorsList()
+### Read Sensors
+
+Retrives an array of sensors sotered in the local data base, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext
+
+- parameter context: `ContextType` to select in which thread the operation will be performed.
+- Returns: An array of `[SensorDTO]` that constains the sensors stored.
 
 ```swift
-public func readSensorsList()
+public func readSensors(context: ContextType) -> [SensorDTO]
 ```
-Retrieves a list of user's sensor stored.
 
-##### Example
+## **TrainingTypeStorage**
+
+TrainingTypeStorage  has an implementation to store, delete, update and read the training types, this class is prepare to perform changes in the main thread and background thread
+
+### CreateTrainingType
+
+Creates a new training type and it is stored in the local data base
+
+- parameter trainingType: The `TrainignType` object  to store.
+- parameter context: `ContextType` to select in which thread the operation will be performed.
 
 ```swift
-let storageManager = RMStorageManager()
-let sensorList = storageManager.readSensorList()
-print(sensorList)
+public func createTrainingType(trainingType: TrainingType, context: ContextType)
 ```
 
-#### getSensorUUID()
+### DeleteTrainingType
+
+Deletes a training type stored in the local data base
+- parameter trainingType: The `TrainignType` object  to delete.
+- parameter context: `ContextType` to select in which thread the operation will be performed.
 
 ```swift
-public func getSensorUUID(sensorName: String) -> String
+public func deleteTrainingType(trainingType: TrainingType, context: ContextType)
 ```
-Returns the sensorUUID for the given name. If the sensor does not exist, it will return an empty string.
 
-##### Example
+### UpdateTrainingType
+
+Updates a training type stored in the local data base
+
+- parameter trainingType: The `TrainignType` object  to delete.
+- parameter context: `ContextType` to select in which thread the operation will be performed.
 
 ```swift
-let storageManager = RMStorageManager()
-let sensorUUID = storageManager.getSensorUUID(sensorName: "Rook iv2222")
-print(sensorUUID)
+public func updateTrainingType(trainingType: TrainingType, context: ContextType)
 ```
 
-#### getSensorsWithoutUUID()
+### ReadTrainingTypes
+
+Reads the training types stored in the local data base
+- parameter context: `ContextType` to select in which thread the operation will be performed.
+- Returns: An array of `[TrainingType]` that constains the training types stored
 
 ```swift
-public func getSensorsWithoutUUID() -> [RMSensorAPI]
+public func readTrainingTypes(context: ContextType) -> [TrainingType]
 ```
-Returns a list of stored sensors that do not contain UUIDs.
 
-##### Example
+## **RookTrainingStorage**
 
-```swift
-let storageManager = RMStorageManager()
-let sensorList = storageManager.getSensorsWithoutUUID()
-print(sensorList)
-```
-### Training storage
+ Reads an deletes the trainings stored in the local data base, this class is prepare to perform changes in the main thread and background thread
 
 | Returns      | Function | Description |
 | ----------- | ----------- | -------- |
-| `throws` | `storeTrainingtype(trainingType: RMTrainingType) throws` | Adds a RMTrainingType object in database, if the training exists, it will be updated. |
-| `void` | `deleteAllTrainingTypes()` | Deletes All the RMTrainingType objects in the database. |
-| `[RMTrainingType]` | `readTrainingTypesList()` | Retrieves the server's TrainingTypes list stored locally.  |
-| `[RMTraininigInfo]` | `getPendingTrainings() -> [RMTrainingInfo]` | Retrieves a list of trainings that have not been uploaded to the server. |
-| `[RMTrainingInfo]` | `getUnfinishedTraining()` | Retrieves a list of trainings that have not been finished. |
+| `[RookTrainingDTO]` | `func getUnfinishedTrainings(context: ContextType) -> [RookTrainingDTO]` | Retrives an array of unfinish training sotered in the local data base that does not have a end date assigned, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
+| `[RookTrainingDTO]` | `func getPendingTrainings(context: ContextType) -> [RookTrainingDTO]` | Retrives an array of pending training sotered in the local data base that does not have a uploadAt date assigned, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
+| `void` | `deleteTraining(_ training: RookTrainingDTO, context: ContextType)` | Deletes  training sotered in the local data base that does not have a uploadAt date assigned, If the action will be performed in the main thread the context have to be the viewContext, in other case the context should be backGroundContext |
 
-#### storeTrainingtype()
+### Get Unfinish Trainings
+
+Retrives an array of unfinish training sotered in the local data base that does not have a end date assigned, If the action will be performed in the main thread the context have to be the viewContext, in other case
+the context should be backGroundContext
+- parameter context: `ContextType` to select in which thread the operation will be performed.
+- Returns: An array of `[RookTrainingDTO]` that constains the unfinish trainings stored
+
 ```swift
-public func storeTrainingtype(trainingType: RMTrainingType)
+public func getUnfinishedTrainings(context: ContextType) -> [RookTrainingDTO]
 ```
 
-Adds a RMTrainingType object in database, if the training exists, it will be updated.
+### Get Pending 
 
-##### Example
+Retrives an array of pending training sotered in the local data base that does not have a uploadAt date assigned, If the action will be performed in the main thread the context have to be the viewContext, in other
+case the context should be backGroundContext
+- parameter context: `ContextType` to select in which thread the operation will be performed.
+- Returns: An array of `[RookTrainingDTO]` that constains the pending trainings stored
+
 ```swift
-
-// Save training info
-let storageManager = RMStorageManager()
-let training = RMTrainingType()
-
-do {
-    try storageManager.storeTrainingType(trainingType: training)
-} catch {
-    print("Error while storing", error)
-}
-
+public func getPendingTrainings(context: ContextType) -> [RookTrainingDTO]
 ```
 
-#### deleteAllTrainingTypes
+## Delete Training
+
+Deletes  training sotered in the local data base that does not have a uploadAt date assigned, If the action will be performed in the main thread the context have to be the viewContext, in other case the context
+should be backGroundContext
+- parameter context: `ContextType` to select in which thread the operation will be performed.
+- parameter context: `RookTrainingDTO` the trainign to delete.
 
 ```swift
-public func deleteAllTrainingTypes()
-```
-
-Deletes All the RMTrainingType objects in the database.
-
-##### Example
-
-```swift
-let storageManager = RMStorageManager()
-
-storageManger.deleteAllTrainingTypes()
-
-```
-
-#### readTrainingTypesList
-
-```swift
-public func readTrainingTypesList() -> [RMTrainingType]
-```
-
-##### Example
-
-```swift
-let storageManager = RMStorageManager()
-
-let trainingTypes = storageManager.readTrainingTypesList()
-print(trainingTypes)
-
-```
-
-#### getPendingTrainings()
-
-```swift
-public  func  getPendingTrainings() -> [RMTrainingInfo]
-```
-
-Retrieves a list of trainings that have not been uploaded to the server.
-
-##### Example
-
-```swift
-let storageManager = RMStoageManager()
-
-let pendingTrainings = storageManager.getPendingTrainings()
-print(pendingTrainings)
-
-```
-
-#### getUnfinishedTrainings()
-
-```swift
-public func getUnfinishedTrainings() -> [RMTrainingInfo]
-```
-
-Retrieves a list of trainings that have not been finished.
-
-##### Example
-
-```swift
-let storageManager = RMStoageManager()
-
-let unfinishedTrainings =storageManager.getUnfinishedTrainings()
-print(unfinishedTrainings)
-
-```
-
-### Training summaries storage
-
-| Returns      | Function | Description |
-| ----------- | ----------- | -------- |
-| `void` | `saveStepRecord(object: RMStepDataRecords)` | Adds a RMStepDataRecords object on database. |
-| `[RMStepDerivedRecord]` | `getAllStepsRecords() -> [RMStepDerivedRecord]` | Returns an array of RMStepDerivedRecord objects stored on database. |
-| `void` | `deleteAllStepsRecords()` | Deletes all the RMStepDataRecords stored on database. |
-| `void` | `deleteSpecificStepRecord(object : Results<RMStepDataRecords>)` | Deletes the RMStepDataRecords object from database. |
-| `void` | `saveHeartRateRecord(object : RMHeartRateDataRecords)` | Adds a RMHeartRateDataRecords object on database. |
-|`RMHrDerivedRecord`| `getAllHeartRateRecords() -> [RMHrDerivedRecord]`| Returns an array of RMHrDerivedRecord objects stored on database. |
-| `void` | `deleteAllHeartRateRecords` | Deletes all the RMHeartRateDataRecords stored on database. |
-| `void` | `deleteSpecificHeartRateRecord(object : Results<RMHeartRateDataRecords>)` | Deletes the RMHeartRateDataRecords object from database. |
-| `void` | `saveTrainingInfoRecord(object : RMTrainingInfo)` | Adds a RMTrainingInfo object on database. |
-| `[RMTrainingInfo]` | `getAllTrainingInfoRecords() -> [RMTrainingInfo]` | Returns an array of RMTrainingInfo objects stored on database. |
-| `void` | `deleteAllTrainingInfoRecords()` | Deletes all the RMTrainingInfo stored on database. |
-| `void` | `deleteSpecificTrainingRecord(object : RMTrainingInfo)` | Deletes the RMTrainingInfo object from database. |
-
-### Steps records
-
-#### saveStepRecord()
-
-```swift
-public func saveStepRecord(object: RMStepDataRecords)
-```
-
-Adds a RMStepDataRecords object on database.
-
-#### getAllStepsRecords()
-
-```swift
-public func getAllStepsRecords() -> [RMStepDerivedRecord]
-```
-
-Returns an array of RMStepDerivedRecord objects stored on database.
-
-#### deleteAllStepsRecords()
-
-```swift
-public func deleteAllStepsRecords()
-```
-
-Deletes all the RMStepDataRecords stored on database.
-
-#### deleteSpecificStepRecord()
-
-```swift
-public func deleteSpecificStepRecord(object : Results<RMStepDataRecords>)
-```
-
-Deletes the RMStepDataRecords object from database.
-
-### Heart rate records
-
-#### saveHeartRateRecord()
-
-```swift
-public func saveHeartRateRecord(object : RMHeartRateDataRecords)
-```
-
-Adds a RMHeartRateDataRecords object on database.
-
-#### getAllHeartRateRecords()
-
-```swift
-public func getAllHeartRateRecords() -> [RMHrDerivedRecord]
-```
-
-Returns an array of RMHrDerivedRecord objects stored on database.
-
-#### deleteAllHeartRateRecords()
-
-```swift
-public func deleteAllHeartRateRecords()
-```
-
-Deletes all the RMHeartRateDataRecords stored on database.
-
-#### deleteSpecificHeartRateRecord()
-
-```swift
-public func deleteSpecificHeartRateRecord(object : Results<RMHeartRateDataRecords>)
-```
-
-Deletes the RMHeartRateDataRecords object from database.
-
-### Training info records
-
-#### saveTrainingInfoRecord()
-
-```swift
-public func saveTrainingInfoRecord(object : RMTrainingInfo)
-```
-
-Adds a RMTrainingInfo object on database.
-
-#### getAllTrainingInfoRecords()
-
-```swift
-public func getAllTrainingInfoRecords() -> [RMTrainingInfo]
-```
-
-Returns an array of RMTrainingInfo objects stored on database.
-
-#### deleteAllTrainingInfoRecords()
-
-```swift
-public func deleteAllTrainingInfoRecords()
-```
-
-Deletes all the RMTrainingInfo stored on database.
-
-#### deleteSpecificTrainingInfoReference()
-
-```swift
-public func deleteSpecificTrainingInfoReference(object : ThreadSafeReference<RMTrainingInfo>)
-```
-
-Deletes the RMTrainingInfo object from database.
-
-### Training update
-
-| Returns      | Function | Description |
-| ----------- | ----------- | --------- |
-| `void` | `generateSummaries(summary: RMTrainingSummaries, _ heartRateRecordsData: RMHeartRateDataRecords? , _ stepsRecordsData: RMStepDataRecords?, time : Int)` | Updates the heart rate data and the steps data for the training summaries given. |
-| `void` | `storeHrSummaries(summary : RMTrainingSummaries, record: RMHeartRateDataRecords, time: Int)` |  This method allows to update the summary records of  a training that corresponds to heart rate, if the heart rate values change, it can be updated. |
-| `void` | `storeStepsSummaries(summary : RMTrainingSummaries, record: RMStepDataRecords, time: Int)` | This method allows to update the summary records of  a training that corresponds to steps.|
-| `void` | `storeZonesSummaries(summary : RMTrainingSummaries, deltaTime: Float, _ delta_calories: Float, effort: Int, time: Int)` | This method updates the time and the calories burned in each zone. |
-| `void` | `storeStepsZonesSummaries(summary : RMTrainingSummaries , delta_steps: Int , cadence: Float, cadenceElements: Int, effort: Int, time: Int)` | This method updates the steps taken in each zone. |
-| `void` | `storeTrainingDuration(time: Int, summary : RMTrainingSummaries)`| Stores or updates the duration for a given summary of a training. |
-| `void` | `addRecordForTraining(hrRecord: RMHeartRateDataRecords? = nil, stepRecord: RMStepDataRecords? = nil, _ training: RMTrainingInfo)` | Adds a RMHeartRateDataRecords and a RMStepDataRecords object in the given training |
-| `void` | `updateTrainingInfo( _ stop: String  = "", sensorUUID: String? = nil, trainingTypeUUID: String? = nil, _ training: RMTrainingInfo)` | Updates a TrainingInfo object whit the sensorUUID, trainingTypeUUID or the stop date given. |
-| `void` | `updateTrainingSummariesToSend(summaryElement : RMTrainingSummary, _ training: RMTrainingInfo)` | Updates the RMTrainingSummary object in the training given. |
-| `void` | `updateTrainingAuxSummaries(_ training : RMTrainingInfo, auxSummary: RMTrainingAuxiliarSummary)` |Updates the auxiliary summaries of a training.|
-|`void` | `updateTrainingSensorProperties(name: String?, sensorUUID: String?, training : RMTrainingInfo)` | Updates the properties of the sensor assigned to a training. |
-| `void` | `updateTrainingUploadDate(for training : RMTrainingInfo)` | Updates the property uploadedAt of the RMTrainingInfo object given, the format of the string date is "yyyy-MM-dd HH:mm:ss". |
-
-#### generateSummaries()
-
-```swift
-public  func  generateSummaries(summary: RMTrainingSummaries, _ heartRateRecordsData: RMHeartRateDataRecords? , _ stepsRecordsData: RMStepDataRecords?, time : Int)
-```
-Updates the heart rate data and the steps data for the training summaries given.
-
-**Parameters**:
-- summary: RMTrainingSummaries object that will be updated.
-- heartRateRecordsData: RMHeartRateDataRecords object to store.
-- stepsRecordsData: RMStepDataRecords object to store.
-
-#### storeHrSummaries()
-
-```swift
-public func storeHrSummaries(summary : RMTrainingSummaries, record: RMHeartRateDataRecords, time: Int)
-```
-
-This method allows to update the summary records of  a training that corresponds to heart rate, if the heart rate values change, it can be updated.
-
-**Parameters**:
--  summary: RMTrainingSummaries object
-  - record:  RMHeartRateDataRecords
-
-
-#### storeStepsSummaries()
-
-```swift
-public func storeStepsSummaries(summary : RMTrainingSummaries, record: RMStepDataRecords, time: Int)
-```
-
-This method allows to update the summary records of  a training that corresponds to steps.
-
-**Parameters**:
-- summary: RMTrainingSummaries object
-- record: record the values of given RMStepsDerivedDataRecord
-
-#### storeZonesSummaries
-
-```swift
-public func  storeZonesSummaries(summary : RMTrainingSummaries, deltaTime: Float, _ delta_calories: Float, effort: Int, time: Int)
-```
-
-This method updates the time and the calories burned in each zone.
-
-**Parameters**:
-- summary: RMTrainingSummaries object
-- record: an array of Int that contains the five zones times
-
-
-#### storeStepsZonesSummaries()
-
-```swift
-public func storeStepsZonesSummaries(summary : RMTrainingSummaries , delta_steps: Int , cadence: Float, cadenceElements: Int, effort: Int, time: Int)
-```
-
-This method updates the steps taken in each zone.
-
-**Parameters**:
-- summary: RMTrainingSummaries object
-- record: an array of Int that contains the five zones times
-
-#### storeTrainingDuration
-
-```swift
-public func storeTrainingDuration(time: Int, summary : RMTrainingSummaries)
-```
-
-Stores the training duration for a given summary, it can be updated
-
-**Parameters**:
-- time: the time to store
-- summary: the summary where to update the time
-
-
-#### addRecordForTraining
-
-```swift
-public func addRecordForTraining(hrRecord: RMHeartRateDataRecords? = nil, stepRecord: RMStepDataRecords? = nil, _ training: RMTrainingInfo)
-```
-
-Adds a RMHeartRateDataRecords and a RMStepDataRecords object in the given training
-
-**Parameters**:
-- hrRecord: The RMHeartRateDataRecords object to store
-- stepRecord: The RMStepDataRecords object to store
-- training: The RMTrainingInfo object that will be updated
-
-#### updateTrainingInfo()
-
-```swift
-public func updateTrainingInfo( _ stop: String = "", sensorUUID: String? = nil, trainingTypeUUID: String? = nil, _ training: RMTrainingInfo)
-```
-
-Updates a TrainingInfo object whit the sensorUUID, trainingTypeUUID or the stop date given.
-
-**Parameters**:
-
-- stop: The string date when the training has finished with the following format yyyy-MM-dd HH:mm:ss
-- sensorUUID: The string of the sensor UUID to change
-- trainingTypeUUID: The string of the training type UUID to change
-- training: The RMTrainingInfo object that will be updated
-
-
-#### updateTrainingSummariesToSend()
-
-```swift
-public func updateTrainingSummariesToSend(summaryElement : RMTrainingSummary, _ training: RMTrainingInfo)
-```
-Updates the RMTrainingSummary object in the training given
-
-**Parameters**:
-- summaryElement: The RMTrainingSummary object that will be appended to the summary.
-- training: The RMTrainingInfo object that will be updated
-
-#### updateTrainingAuxSummaries()
-
-```swift
-public func updateTrainingAuxSummaries(_ training : RMTrainingInfo, auxSummary: RMTrainingAuxiliarSummary)
-```
-
-Updates the auxiliary summaries of a training.
-
-**Parameters**:
-- training: The RMTrainingInfo object that will be updated
-- auxSummary: The RMTrainingAuxiliarSummary object that will be updated.
-
-#### updateTrainingSensorProperties()
-
-```swift
-public func updateTrainingSensorProperties(name: String?, sensorUUID: String?, training : RMTrainingInfo)
-```
-
-Updates the properties of the sensor assigned to a training
-
-**Parameters**:
-- training: The RMTrainingInfo object that will be updated
-- name: The string name of the sensor
-- sensorUUID: The string UUID of the sensor
-
-#### updateTrainingUploadDate()
-
-```swift
-public func updateTrainingUploadDate(for training : RMTrainingInfo)
-```
-
-Updates the property uploadedAt of the RMTrainingInfo object given, the format of the string date is "yyyy-MM-dd HH:mm:ss"
-
-**Parameters**:
-- training: The RMTrainingInfo object that will be updated
-
-### BackGroundTasks
-
-The class is used to execute some task in the back ground thread, all the task has a limit of time. This class conforms the singleton pattern.
-
-```swift
-public class BackGroundTasks: NSObject
-```
-
-| Returns | Function | Description |
-| --------| -----------| ---------- |
-| `RMResponse` | `uploadPendingTraining(completion: @escaping(RMResponse) -> Void)` | The method uploads all the trainings stored in the local data base returns a `RMResponse` object asynchronously. |
-
-#### uploadPendingTraining()
-
-You can call the method every time the user launch the app in order to upload all its trainings.
-
-```swift
-public func uploadPendingTraining(completion: **@escaping**(RMResponse) -> Void)
-```
-
-##### Example
-
-```swift
-BackGroundTasks.shared.uploadPendingTraining() { response in
-    print ("Response: \(response)")
-}
+public func deleteTraining(_ training: RookTrainingDTO, context: ContextType)
 ```
 
 
-### RMModels
+## **RWModels**
 
-#### RMUser
+### RWRookUserDTO
 
 ```swift
-public class RMUser: Object, Codable
+public struct RWRookUserDTO
 ```
-The RMUser class is a realm model that conform the  Codable protocol, this model is used to store the information of a user
+This object contains all the information of the uses
 
 | Type | Name | Description |
 | ------ | ------ | -------- |
-| `Int` | id | primaryKey of the object it can not be changed. |
-| `String?` | userUUID | The UUID of the user. |
-| `String?` | token_user | This property is used to identify if the user is logger with rookmotion, if you use you own authentication method you can store your token in this property. |
-| `String?` | name | Name of the user, it has to contain at least 4 characters. |
-| `String?` | lastName | Last name of the user, it has to contain at least 4 characters. |
-| `String?` | email | email of the user. |
-| `String?` | pseudonym | nickname of the user |
-| RMUserPhysiologicalVariables? | physiologicalVariables | RMUserPhysiologicalVariables object that contains the physiological variables of the user. |
+| `String` | `userUUID` | The uuid to identifiy the user this is provided by the web service. |
+| `String?` | `userToken` | This field has to be nil |
+| `String` | `name` | The user's name. |
+| `String?` | `lastName` | The user's last name. |
+| `String?` | `pseudonym` | The user's pseudonym. |
+| `String` | `userEmail` | The user's email. |
+| `String?` | `userImage` | The url of the user image |
+| `RWRookPhysiologicalVariablesDTO?` | `physiologicalVariables` | `RWRookPhysiologicalVariablesDTO` object that contains the physiological variables of the user. |
 
-#### updatePhysiologicalVariables()
+### RWRookPhysiologicalVariablesDTO
 
-```swift
-public func updatePhysiologicalVariables(weight: Double, height: Double, restingHeartRate: Int)
-```
-
-Update the stored user physiologicalVariables.
-
-**Parameters**:
-- weight: value from 30 to 200
-- height: value from 120 to 220
-- restingHeartRate: value from 40 to 100
-
-#### updateUserProperties()
+The `RWRookPhysiologicalVariablesDTO` contains the weigth, heith and resting heart rate of the user.
 
 ```swift
-public func updateUserProperties(name: String?,lastName1: String?, lastName2 : String?, phone: String?,birthday: String?, sex: String?)
+public struct RWRookPhysiologicalVariablesDTO
 ```
-
-Updates the user general information.
-
-**Parameters**:
-- name: The user name
-- lastName1: the user last name
-- lastName2: if the user has other name can be typed here
-- phone: phone numer 8 to 12 digits
-- birthday: format YYYY-MM-DD
-- sex: "male" or "female"
-
-#### RMUserPhysiologicalVariables
-
-```swift
-public class RMUserPhysiologicalVariables: Object, Codable
-```
-
-The RMUserPhysiologicalVariables class is a realm model that conform the  Codable protocol, this model is used to store the physiological variables of a user.
 
 | Type | Name | Description |
 | ------ | ------ | -------- |
@@ -1298,77 +868,78 @@ The RMUserPhysiologicalVariables class is a realm model that conform the  Codabl
 #### RMTrainingType
 
 ```swift
-public class RMTrainingType: Object, Codable
+public struct RWRookTrainingType
 ```
 
-The RMTrainingType class is a realm model that conform the  Codable protocol, this model is used to store the training retrieved from the server.
+The `RWRookTrainingType` this model is used to store the training retrieved from the server.
 
 | Type | Name | Description |
 | ------ | ------ | -------- |
 | `String?` | `trainingTypeUUID` | The UUID of the training |
 | `String?` | `trainigName` | The name of the training |
-| `OptionalInt?` | `useHeartRate` | An object that indicates if the workout use heart rate |
-| `OptionalInt?` | `useCycling` | An object that indicates if the workout use cycling |
-| `OptionalInt?` | `useGps` | An object that indicates if the workout use gps |
-| `OptionalInt?` | `useSteps` | An object that indicates if the workout use heart rate |
+| `Int?` | `useHeartRate` | An object that indicates if the workout use heart rate |
+| `Int?` | `useCycling` | An object that indicates if the workout use cycling |
+| `Int?` | `useGps` | An object that indicates if the workout use gps |
+| `RWRookUseSteps?` | `useSteps` | An object that indicates if the workout use heart rate |
 
-#### UseSteps
+#### RWRookUseSteps
 
 ```swift
-public class UseSteps: Object, Codable
+public struct RWRookUseSteps
 ```
 
-The UseSteps model is used to store if a training use steps.
+The `RWRookUseSteps` model is used to store if a training use steps.
 
 | Type | Name | Description |
 | ------ | ------ | -------- |
-| OptionalInt? | `enabled` | Optional Int that indicates if steps are enable |
-| `String` | `stepsTypes` | Strings that indicates the type of steps. |
+| `Int` | `enabled` | Int that indicates if steps are enable |
+| `String` | `stepsTypes` | String that indicates the type of steps. |
 
 #### RMSensorAPI
 
 ```swift
-public class RMSensorAPI: Object, Codable
+public struct RWRookSensorDTO
 ```
 
-This is model is used to store the sensors retrieved from the web service.
+/// This is model contains the information of a sensor
 
 | Type | Name | Description |
 | ------ | ------ | -------- |
-| `String?` |  `sensorName` | The name of the sensor |
+| `String` |  `sensorName` | The name of the sensor |
 | `String?` | `sensorUUID` | The UUID that identifies the sensor on the server |
 | `String?` | `sensorMAC` | The mac of the sensor. |
-| `String?` | `updatedAt` | Sensor update date with format YYYY-MM-dd. |
+| `Date?` | `updatedAt` | Sensor update date with format YYYY-MM-dd. |
 | `String?` | `ownershipType` | Indicates the ownership type. |
 
-#### RWTrainingInfo
+#### RWRookTrainingDTO
+
+The `RWRookTrainingDTO` contains all the information of a training.
 
 ```swift
-public class RWTrainingInfo: Object, Codable
+public struct RWRookTrainingDTO
 ```
-
-RMTrainingInfo model is used to store the workout data, it can help to recover the information, if the app terminates.
 
 | Type | Name | Description |
 | ------ | ------ | -------- |
-|`String?` | `start` | start date of the workout with the format "yyyy-MM-dd HH:mm:ss" |
-|`String?` | `end` | end date of the workout with the format "yyyy-MM-dd HH:mm:ss"  |
-|`String?` | `trainingTypeUUID` | The UUID of the training training type that will be performed. |
-|`String?` | `sensorUUID` | The UUID of the sensor that is used in the workout. |
-|`String?` | `sensorName` | The sensor name that is used in the workout. |
-|`String?` | `deviceType` | The device where the workout was performed. |
-|`String?` | `uploadedAt` | The uploaded date of the workout. |
-|`Int` | `groupalMode` | Indicates if the training was performed in group. |
-|`RMAuxiliarSummary??` | `auxSummary` | Object to store the auxiliary summaries of the workout.  |
-|`RMTrainingSummaries?` | `summary` | Object to store the summary of the workout. |
-|`RMTrainingStoragedRecords?` | `records` | Object to store the list of heart rate records and steps records |
-| `RMRemoteClass?` | `remoteClass` | Object to store the properties of a remote training |
-|`List<RMTrainingSummary>` | `summaries` | Object to store the summary id and its value |
+| `String?` | `start` | start date of the workout with the format "yyyy-MM-dd HH:mm:ss" |
+| `String?` | `end` | end date of the workout with the format "yyyy-MM-dd HH:mm:ss"  |
+| `String?` | `trainingTypeUUID` | The UUID of the training training type that will be performed. |
+| `String?` | `sensorUUID` | The UUID of the sensor that is used in the workout. |
+| `String?` | `sensorName` | The sensor name that is used in the workout. |
+| `String?` | `deviceType` | The device where the workout was performed. |
+| `String?` | `uploadedAt` | The uploaded date of the workout. |
+| `Int16` | `groupalMode` | Indicates if the training was performed in group. |
+| `String?` | `offset` | indicates the offset in hours of the utc start. |
+|`RWRookAuxiliarSummaryDTO` | `rookAuxiliarSummary` | Object to store the auxiliary summaries of the workout.  |
+|`RWRookTrainingSummaryDTO` |`rookTrainingSummaries` | Object to store the summary of the workout. |
+|`RWRookTrainingRecordsDTO?` | `records` | Object to store the list of heart rate records and steps records |
+| `RWRookRemoteClassDTO?` | `rookRemoteClass` | Object to store the properties of a remote training |
+|`[RWRookTrainingSummaryById]` | `summaries` | Object to store the summary id and its value |
 
-#### RWAuxiliarSummary
+#### RWRookAuxiliarSummaryDTO
 
 ```swift
-public class RWAuxiliarSummary: Object
+public struct RWRookAuxiliarSummaryDTO
 ```
 RMAuxiliarSummary model helps to store the number of samples ant its value accumulated
 
@@ -1384,49 +955,49 @@ RMAuxiliarSummary model helps to store the number of samples ant its value accum
 #### RWTrainingSummaries
 
 ```swift
-public class RWTrainingSummaries: Object
+public class RWTrainRWRookTrainingSummaryDTOingSummaries: Object
 ```
 This model contains the training summaries on realtime.
 
 | Type | Name | Description |
 | ------ | ------ | -------- |
-| `Int` | `duration_time_tot` | Duration of the workout. |
-| `Float` | `z1_time` | Time in the first zone. |
-| `Float` | `z2_time` | Time in the second zone. |
-| `Float` | `z3_time` | Time in the third zone. |
-| `Float` | `z4_time` | Time in the fourth zone. |
-| `Float` | `z5_time` | Time in the fifth zone. |
-| `Int` | `hr_max` | Heart rate max value. |
-| `Int` | `hr_min` | Heart rate min value. |
-| `Int` | `hr_avg` | Heart rate average value. |
-| `Int` | `effort_max` | effort max value. |
-| `Int` | `effort_min` | effort min value. |
-| `Int` | `effort_avg` | effort average value. |
+| `Int` | `durationTimeTot` | Duration of the workout. |
+| `Float` | `z1Time` | Time in the first zone. |
+| `Float` | `z2Time` | Time in the second zone. |
+| `Float` | `z3Time` | Time in the third zone. |
+| `Float` | `z4Time` | Time in the fourth zone. |
+| `Float` | `z5Time` | Time in the fifth zone. |
+| `Int` | `hrMax` | Heart rate max value. |
+| `Int` | `hrAvg` | Heart rate min value. |
+| `Int` | `hrMin` | Heart rate average value. |
+| `Int` | `effortMax` | effort max value. |
+| `Int` | `effortAvg` | effort min value. |
+| `Int` | `effortMin` | effort average value. |
 | `Int` | `calories` | Total calories burned in training. |
-| `Float` | `z1_calories_tot` | Total calories burned in the first zone. |
-| `Float` | `z2_calories_tot` | Total calories burned in the second zone. |
-| `Float` | `z3_calories_tot` | Total calories burned in the third zone. |
-| `Float` | `z4_calories_tot` | Total calories burned in the fourth zone. |
-| `Float` | `z5_calories_tot` | Total calories burned in the fifth zone. |
+| `Float` | `z1Calories` | Total calories burned in the first zone. |
+| `Float` | `z2Calories` | Total calories burned in the second zone. |
+| `Float` | `z3Calories` | Total calories burned in the third zone. |
+| `Float` | `z4Calories` | Total calories burned in the fourth zone. |
+| `Float` | `z5Calories` | Total calories burned in the fifth zone. |
 | `Int` | `steptsTotal` | Total steps taken in training. |
-| `Int` | `z1_steps_tot` | Total steps taken in first zone. |
-| `Int` | `z2_steps_tot` | Total steps taken in second zone. |
-| `Int` | `z3_steps_tot` | Total steps taken in third zone. |
-| `Int` | `z4_steps_tot` | Total steps taken in fourth zone. |
-| `Int` | `z5_steps_tot` | Total steps taken in fifth zone. |
-| `Int` | `cadence_max` | Cadence max value. |
-| `Int` | `cadence_min` | Cadence min value. |
-| `Int` | `cadence_avg` | Cadence average value. |
-| `Int` | `z1_cadence_tot` | Cadence in the first zone. |
-| `Int` | `z2_cadence_tot` | Cadence in the second zone. |
-| `Int` | `z3_cadence_tot` | Cadence in the third zone. |
-| `Int` | `z4_cadence_tot` | Cadence in the fourth zone. |
-| `Int` | `z5_cadence_tot` | Cadence in the fifth zone. |
+| `Int` | `z1Steps` | Total steps taken in first zone. |
+| `Int` | `z2Steps` | Total steps taken in second zone. |
+| `Int` | `z3Steps` | Total steps taken in third zone. |
+| `Int` | `z4Steps` | Total steps taken in fourth zone. |
+| `Int` | `z5Steps` | Total steps taken in fifth zone. |
+| `Int` | `cadenceMax` | Cadence max value. |
+| `Int` | `cadenceAvg` | Cadence min value. |
+| `Int` | `cadenceMin` | Cadence average value. |
+| `Int` | `z1Cadence` | Cadence in the first zone. |
+| `Int` | `z2Cadence` | Cadence in the second zone. |
+| `Int` | `z3Cadence` | Cadence in the third zone. |
+| `Int` | `z4Cadence` | Cadence in the fourth zone. |
+| `Int` | `z5Cadence` | Cadence in the fifth zone. |
 
-#### RWRemoteClass
+#### RWRookRemoteClassDTO
 
 ```swift
-public class RWRemoteClass: Object
+public struct RWRookRemoteClassDTO
 ```
 
 This model stores the data of a remote class.
@@ -1443,20 +1014,20 @@ This model stores the data of a remote class.
 #### RWTrainingStoragedRecords
 
 ```swift
-public class RWTrainingStoragedRecords: Object, Codable
+public class RWRookTrainingRecordsDTO: Object, Codable
 ```
 
 This model stores a list of the heart rate data and a list of the steps data.
 
 | Type | Name | Description |
 | ------ | ------ | -------- |
-| `List<RMHeartRateDataRecords>` | `hrDerivedRecords` | List of heart rate data records. |
-| `List<RMStepDataRecords>` | `stepsDerivedRecords` | List of steps data records. |
+| `[HeartRateRecordsDTO]` | `hrDerivedRecords` | List of heart rate data records. |
+| `[StepRecordsDTO]` | `stepsDerivedRecords` | List of steps data records. |
 
-#### RWHeartRateDataRecords
+#### HeartRateRecordsDTO
 
 ```swift
-public class RWHeartRateDataRecords: Object, Codable
+public struct HeartRateRecordsDTO
 ```
 
 This model contains the steps derived data that can be calculated on the  Equation class.
@@ -1464,16 +1035,16 @@ This model contains the steps derived data that can be calculated on the  Equati
 | Type | Name | Description |
 | ------ | ------ | -------- |
 | `String` | `timestamp` | Sample date with format "yyyy-MM-dd HH:mm:ss". |
-| `Int` | `heartRate` | Heart rate value. |
-| `Float` | `calories` | Calories calculated. |
+| `Int16` | `heartRate` | Heart rate value. |
+| `Float` | `calories` | Calories calculated. |
 | `Float` | `effort` | Effort calculated. |
-| `String` | `start` | Start date of the training with format "yyyy-MM-dd HH:mm:ss".  |
+| `String?` | `start` | Start date of the training with format "yyyy-MM-dd HH:mm:ss".  |
 | `Float` | `heart_rate_variability` | Heart rate variability. |
 
-#### RWStepDataRecords
+#### StepRecordsDTO
 
 ```swift
-public class RWStepDataRecords: Object, Codable
+public struct StepRecordsDTO
 ```
 
 This model contains the steps derived data that can be calculated on the Equation class
@@ -1481,14 +1052,14 @@ This model contains the steps derived data that can be calculated on the Equatio
 | Type | Name | Description |
 | ------ | ------ | -------- |
 | `String` | `timestamp` | Sample date with format "yyyy-MM-dd HH:mm:ss". |
-| `Int` | `steps` | Number of steps. |
-| `Float` | `cadence` | Cadence calculated. |
+| `Int64` | `steps` | Number of steps. |
+| `Float` | `cadence` | Cadence calculated. |
 | `String` | `start` | Start date of the training with format "yyyy-MM-dd HH:mm:ss".  |
 
-#### RWTrainingSummary
+#### RWRookTrainingSummaryById
 
 ```swift
-public class RWTrainingSummary: Object, Codable
+public struct RWRookTrainingSummaryById
 ```
 
 This model helps to store the summary id and its value.
@@ -1527,21 +1098,6 @@ This model contains the steps derived data that can be calculated on the Equatio
 | `Float?` | `cadence` | The cadence of the sample |
 | `Int?` | `steps` | The steps count. |
 
-#### WorkoutType
-
-The model contains the data for a workout. 
-
-```swift
-public struct WorkoutType
-```
-
-| Type | Name | Description |
-| ------ | ------ | -------- |
-| `String`| `uuid` | The uuid code of the workout type. |
-| `String`| `name` | The name of the activity. |
-| `Bool` | useSteps | Indicates if the workout has the step count enable |
-| `String?`| `typeSteps | Indicates the type of steps or jumps. |
-
 #### WorkoutConfiguration
 
 Contains all the data to configure a workout session
@@ -1577,7 +1133,7 @@ Contains all the data that is used in a remote class, the action are  connect, s
 | `String?` | `typeSteps` | Indicates the type of steps of jumps. |
 | `Int` | `waitingTimeRemaining` | The remain time of the waiting room. |
 
-#### RMResponse
+#### RMWResponse
 
 Indicates the response of the request.
 
