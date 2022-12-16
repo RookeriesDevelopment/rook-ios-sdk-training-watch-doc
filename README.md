@@ -44,6 +44,7 @@ These functionalities are:
     * [Repository classes](#user-content-repository-classes)
         * [Repository Training Types](#user-content-repository-training-types)
         * [Repository Training](#user-content-repository-training)
+        * [Repository User](#user-content-repository-user)
     * [NetworkManager](#user-content-networkmanager)
         * [RWUserAPI](#user-content-rwuserapi)
         * [RWTrainingAPI](#user-content-rwtrainingapi)
@@ -314,7 +315,14 @@ public func stop()
 
 This method finish a workout all the information will be send to the rookmotion web server the training will be associate to the user stored in the local data base.
 
-**Note: It is important to request access to the remote classes before use this method**
+#### stopTraining
+
+The stopTraining method was included this method ends the current training and it will try to upload to the API.
+
+``` swift
+public func stopTraining(completion: @escaping (RWTrainingUploadResponse) -> Void)
+```
+
 
 #### restoreWorkout()
 
@@ -414,6 +422,72 @@ public func  uploadPendingTrainings(delete: Bool,completion: @escaping (RMWRespo
 ```
 
 The method uploads all the training stored in the local data base, if the `delete` input is set with true, the trainings stored will be deleted after the upload.
+
+### Repository User
+
+ The `RepositoryUser` class handle the request and storage of the user information in the local data base and the rook API.
+ 
+ some of the methods of this class need a user stored in the local data base
+ 
+ The  methods available in this class are:
+ 
+ 1. checkUserRookMotion
+ 2. getUserInfo
+ 3. updateUser
+ 4. addUserPhysiologicalVariables
+
+ ```swift
+  public class RepositoryUser: NSObject
+ ```
+
+
+ #### checkUserRookMotion
+
+ Add a user to the web API and it will be stored in the local data base, if the email of the user is already registed it will return the uuid of the user
+   - parameter email: `String` The sensor's name yo wan to store.
+   - parameter completion: A block that it is called after the request is loaded. The system calls this block with the following parameters.
+   - Result: with the uuid of the user added of an error
+
+```swift
+ public func checkUserRookMotion(email: String,
+                                completion: @escaping(Result<String, Error>) -> Void)
+```
+
+#### getUserInfo
+
+Updates the user infomation
+   - parameter user: `UpdateUser` Object with user information to update
+   - parameter completion: A block that it is called after the request is loaded. The system calls this block with the following parameters.
+   - parameter Result: resut of the request
+
+```swift
+public func updateUser(user: UpdateUser,
+                  completion: @escaping(Result<Bool, Error>) -> Void)
+```
+
+#### updateUser
+
+Updates the user infomation
+   - parameter user: `UpdateUser` Object with user information to update
+   - parameter completion: A block that it is called after the request is loaded. The system calls this block with the following parameters.
+   - parameter Result: resut of the request
+
+```swift
+public func updateUser(user: UpdateUser,
+                  completion: @escaping(Result<Bool, Error>) -> Void)
+```
+
+#### addUserPhysiologicalVariables
+
+Adds a set of physiological variables
+   - parameter physiological: `AddUserPysiolocalRequest` Object with physiological variables
+   - parameter completion: A block that it is called after the request is loaded. The system calls this block with the following parameters.
+   - parameter Result: resut of the request
+
+```swift
+public func addUserPhysiologicalVariables(physiological: AddUserPysiolocalRequest,
+                                            completion: @escaping (Result<Bool, Error>) -> Void)
+```
 
 ###  NetworkManager
 
@@ -1146,6 +1220,19 @@ public struct RMResponse
 | `String` | `code` | The httpCode of the request. |
 | `String` | `message` | The message of the response. |
 | `Bool` | `success` | Indicates if the request was successful. |
+
+#### RWTRainingUploadResponse
+
+RWTrainingUploadResponse contains the information of the request of a training upload process
+ 
+  Property     |    Description
+  ------------ | -----------------
+  code         | The http code of the request
+  message      | The message of the request
+  success      | Indicates if the request was successful
+  uuid         | The uuid of the training uploaded
+  summaries    | The summaries of the training
+
 
 ## RookMotion
 
