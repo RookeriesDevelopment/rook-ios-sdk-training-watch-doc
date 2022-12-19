@@ -455,14 +455,11 @@ The method uploads all the training stored in the local data base, if the `delet
 
 #### getUserInfo
 
-Updates the user infomation
-   - parameter user: `UpdateUser` Object with user information to update
-   - parameter completion: A block that it is called after the request is loaded. The system calls this block with the following parameters.
-   - parameter Result: resut of the request
+Returns the user information.
+ - parameter Result UserInfoResponse, Error: Object that contains information of the response.
 
 ```swift
-public func updateUser(user: UpdateUser,
-                  completion: @escaping(Result<Bool, Error>) -> Void)
+public func getUserInfo(completion: @escaping (Result<UserInfoResponse, Error>) -> Void)
 ```
 
 #### updateUser
